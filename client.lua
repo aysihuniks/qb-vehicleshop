@@ -480,7 +480,7 @@ RegisterNetEvent('qb-vehicleshop:client:TestDrive', function()
             SetVehicleEngineOn(veh, true, true, false)
             testDriveVeh = netId
             QBCore.Functions.Notify(Lang:t('general.testdrive_timenoti', { testdrivetime = Config.Shops[tempShop]['TestDriveTimeLimit'] }), "success")
-        end, 'TESTDRIVE', Config.Shops[tempShop]['ShowroomVehicles'][ClosestVehicle].chosenVehicle, Config.Shops[tempShop]['TestDriveSpawn'], true) 
+        end, 'TESTDRIVE', Config.Shops[tempShop]['ShowroomVehicles'][ClosestVehicle].chosenVehicle, Config.Shops[tempShop]['TestDriveSpawn'], true)
 
         createTestDriveReturn()
         startTestDriveTimer(Config.Shops[tempShop]['TestDriveTimeLimit'] * 60, prevCoords)
@@ -492,7 +492,6 @@ end)
 RegisterNetEvent('qb-vehicleshop:client:customTestDrive', function(data)
     if not inTestDrive then
         inTestDrive = true
-        local vehicle = data
         local prevCoords = GetEntityCoords(PlayerPedId())
         tempShop = insideShop -- temp hacky way of setting the shop because it changes after the callback has returned since you are outside the zone
         QBCore.Functions.TriggerCallback('qb-vehicleshop:server:spawnvehicle', function(netId, properties, vehPlate)
@@ -515,7 +514,7 @@ RegisterNetEvent('qb-vehicleshop:client:customTestDrive', function(data)
             SetVehicleEngineOn(veh, true, true, false)
             testDriveVeh = netId
             QBCore.Functions.Notify(Lang:t('general.testdrive_timenoti', { testdrivetime = Config.Shops[tempShop]['TestDriveTimeLimit'] }))
-        end, 'TESTDRIVE', Config.Shops[tempShop]['ShowroomVehicles'][ClosestVehicle].chosenVehicle, Config.Shops[tempShop]['TestDriveSpawn'], true) 
+        end, 'TESTDRIVE', Config.Shops[tempShop]['ShowroomVehicles'][ClosestVehicle].chosenVehicle, Config.Shops[tempShop]['TestDriveSpawn'], true)
         createTestDriveReturn()
         startTestDriveTimer(Config.Shops[tempShop]['TestDriveTimeLimit'] * 60, prevCoords)
     else
@@ -685,7 +684,7 @@ end)
 
 RegisterNetEvent('qb-vehicleshop:client:openFinance', function(data)
     local dialog = exports['qb-input']:ShowInput({
-        header = getVehBrand():upper() .. ' ' .. data.buyVehicle:upper() .. ' - $' .. data.price,
+        header = getVehBrand():upper() .. ' ' .. data.buyVehicle:upper() .. ' - $' .. getVehPrice(),
         submitText = Lang:t('menus.submit_text'),
         inputs = {
             {
@@ -710,7 +709,7 @@ end)
 
 RegisterNetEvent('qb-vehicleshop:client:openCustomFinance', function(data)
     local dialog = exports['qb-input']:ShowInput({
-        header = getVehBrand():upper() .. ' ' .. data.vehicle:upper() .. ' - $' .. data.price,
+        header = getVehBrand():upper() .. ' ' .. data.vehicle:upper() .. ' - $' .. getVehPrice(),
         submitText = Lang:t('menus.submit_text'),
         inputs = {
             {
