@@ -684,7 +684,7 @@ end)
 
 RegisterNetEvent('qb-vehicleshop:client:openFinance', function(data)
     local dialog = exports['qb-input']:ShowInput({
-        header = getVehBrand():upper() .. ' ' .. data.buyVehicle:upper() .. ' - $' .. getVehPrice(),
+        header = getVehBrand():upper() .. ' ' .. data.buyVehicle:upper() .. ' - $' .. data.price,
         submitText = Lang:t('menus.submit_text'),
         inputs = {
             {
@@ -709,7 +709,7 @@ end)
 
 RegisterNetEvent('qb-vehicleshop:client:openCustomFinance', function(data)
     local dialog = exports['qb-input']:ShowInput({
-        header = getVehBrand():upper() .. ' ' .. data.vehicle:upper() .. ' - $' .. getVehPrice(),
+        header = getVehBrand():upper() .. ' ' .. data.vehicle:upper() .. ' - $' .. data.price,
         submitText = Lang:t('menus.submit_text'),
         inputs = {
             {
