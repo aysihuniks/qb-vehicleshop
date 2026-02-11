@@ -41,6 +41,11 @@ RegisterNetEvent('QBCore:Client:OnPlayerUnload', function()
     PlayerData = {}
 end)
 
+RegisterNetEvent('QBCore:Client:UpdateObject', function()
+    QBCore = exports['qb-core']:GetCoreObject()
+    PlayerData = QBCore.Functions.GetPlayerData()
+end)
+
 local function CheckPlate(vehicle, plateToSet)
     local vehiclePlate = promise.new()
     CreateThread(function()
