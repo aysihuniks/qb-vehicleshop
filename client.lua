@@ -41,6 +41,11 @@ RegisterNetEvent('QBCore:Client:OnPlayerUnload', function()
     PlayerData = {}
 end)
 
+RegisterNetEvent('QBCore:Client:UpdateObject', function()
+    QBCore = exports['qb-core']:GetCoreObject()
+    PlayerData = QBCore.Functions.GetPlayerData()
+end)
+
 local function CheckPlate(vehicle, plateToSet)
     local vehiclePlate = promise.new()
     CreateThread(function()
@@ -475,7 +480,7 @@ RegisterNetEvent('qb-vehicleshop:client:TestDrive', function()
             SetVehicleEngineOn(veh, true, true, false)
             testDriveVeh = netId
             QBCore.Functions.Notify(Lang:t('general.testdrive_timenoti', { testdrivetime = Config.Shops[tempShop]['TestDriveTimeLimit'] }), "success")
-        end, 'TESTDRIVE', Config.Shops[tempShop]['ShowroomVehicles'][ClosestVehicle].chosenVehicle, Config.Shops[tempShop]['TestDriveSpawn'], true) 
+        end, 'TESTDRIVE', Config.Shops[tempShop]['ShowroomVehicles'][ClosestVehicle].chosenVehicle, Config.Shops[tempShop]['TestDriveSpawn'], true)
 
         createTestDriveReturn()
         startTestDriveTimer(Config.Shops[tempShop]['TestDriveTimeLimit'] * 60, prevCoords)
@@ -487,7 +492,6 @@ end)
 RegisterNetEvent('qb-vehicleshop:client:customTestDrive', function(data)
     if not inTestDrive then
         inTestDrive = true
-        local vehicle = data
         local prevCoords = GetEntityCoords(PlayerPedId())
         tempShop = insideShop -- temp hacky way of setting the shop because it changes after the callback has returned since you are outside the zone
         QBCore.Functions.TriggerCallback('qb-vehicleshop:server:spawnvehicle', function(netId, properties, vehPlate)
@@ -510,7 +514,7 @@ RegisterNetEvent('qb-vehicleshop:client:customTestDrive', function(data)
             SetVehicleEngineOn(veh, true, true, false)
             testDriveVeh = netId
             QBCore.Functions.Notify(Lang:t('general.testdrive_timenoti', { testdrivetime = Config.Shops[tempShop]['TestDriveTimeLimit'] }))
-        end, 'TESTDRIVE', Config.Shops[tempShop]['ShowroomVehicles'][ClosestVehicle].chosenVehicle, Config.Shops[tempShop]['TestDriveSpawn'], true) 
+        end, 'TESTDRIVE', Config.Shops[tempShop]['ShowroomVehicles'][ClosestVehicle].chosenVehicle, Config.Shops[tempShop]['TestDriveSpawn'], true)
         createTestDriveReturn()
         startTestDriveTimer(Config.Shops[tempShop]['TestDriveTimeLimit'] * 60, prevCoords)
     else
