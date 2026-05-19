@@ -10,7 +10,7 @@ local zones = {}
 local insideShop, tempShop = nil, nil
 
 -- Handlers
-AddEventHandler('QBCore:Client:OnPlayerLoaded', function()
+RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
     PlayerData = QBCore.Functions.GetPlayerData()
     local citizenid = PlayerData.citizenid
     TriggerServerEvent('qb-vehicleshop:server:addPlayer', citizenid)
