@@ -933,3 +933,23 @@ CreateThread(function()
         end
     end
 end)
+
+-- Update the showroom physically when a vehicle is dynamically removed
+RegisterNetEvent('qb-vehicleshop:client:ReplaceDeletedVehicle', function(shopName, deletedModel, replacement)
+    if not Config.Shops[shopName] then return end
+    
+    for i, vehData in ipairs(Config.Shops[shopName]['ShowroomVehicles']) do
+        if vehData.defaultVehicle == deletedModel then
+            vehData.defaultVehicle = replacement
+        end
+        
+        if vehData.chosenVehicle == deletedModel then
+            local swapData = {
+                ClosestShop = shopName,
+                ClosestVehicle = i,
+                toVehicle = replacement
+            }
+            TriggerEvent('qb-vehicleshop:client:swapVehicle', swapData)
+        end
+    end
+end)

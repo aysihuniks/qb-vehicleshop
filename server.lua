@@ -545,3 +545,46 @@ QBCore.Commands.Add('transfervehicle', Lang:t('general.command_transfervehicle')
         TriggerClientEvent('QBCore:Notify', src, Lang:t('error.buyertoopoor'), 'error')
     end
 end)
+
+-- Helper to check if a value exists in a table (useful for shop arrays)
+local function hasValue(tbl, val)
+    if type(tbl) ~= "table" then return false end
+    for _, v in pairs(tbl) do
+        if v == val then return true end
+    end
+    return false
+end
+
+-- Dynamically update showrooms if a vehicle gets removed from QBCore.Shared.Vehicles
+RegisterNetEvent('qb-vehicleshop:server:UpdateShowroomAfterDeletion', function(deletedModel, deletedCategory)
+    local currentVehicles = exports['qb-core']:GetShared('Vehicles')
+    
+    for shopName, shopData in pairs(Config.Shops) do
+        local replacement = nil
+        local sameCatPool = {}
+        local fallbackPool = {}
+        
+        for k, v in pairs(currentVehicles) do
+            if k ~= deletedModel then
+                local inShop = (v.shop == shopName) or (type(v.shop) == "table" and hasValue(v.shop, shopName))
+                if inShop then
+                    fallbackPool[#fallbackPool + 1] = k
+                    if v.category == deletedCategory then
+                        sameCatPool[#sameCatPool + 1] = k
+                    end
+                end
+            end
+        end
+        
+        -- Prioritize same category, fallback to any vehicle in the shop
+        if #sameCatPool > 0 then
+            replacement = sameCatPool[math.random(1, #sameCatPool)]
+        elseif #fallbackPool > 0 then
+            replacement = fallbackPool[math.random(1, #fallbackPool)]
+        end
+        
+        if replacement then
+            TriggerClientEvent('qb-vehicleshop:client:ReplaceDeletedVehicle', -1, shopName, deletedModel, replacement)
+        end
+    end
+end)
