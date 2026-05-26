@@ -55,6 +55,13 @@ QBCore.Functions.CreateCallback('qb-vehicleshop:server:spawnvehicle', function(s
 end)
 
 -- Handlers
+
+-- Update server-side cached variables when QBCore objects are updated dynamically
+AddEventHandler('QBCore:Server:UpdateObject', function()
+    QBCore = exports['qb-core']:GetCoreObject({ 'Functions', 'Commands' })
+    sharedVehicles = exports['qb-core']:GetShared('Vehicles')
+end)
+
 -- Store game time for player when they load
 RegisterNetEvent('qb-vehicleshop:server:addPlayer', function(citizenid)
     financetimer[citizenid] = os.time()
