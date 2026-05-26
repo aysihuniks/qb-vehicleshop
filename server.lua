@@ -562,26 +562,37 @@ local function hasValue(tbl, val)
     return false
 end
 
--- Dynamically update showrooms if a vehicle gets removed from QBCore.Shared.Vehicles
-RegisterNetEvent('qb-vehicleshop:server:UpdateShowroomAfterDeletion', function(deletedModel, deletedCategory)
+-- Dynamically update showrooms if a vehicle gets removed from QBCore.Shared.Vehicles (Server-Side Only for Security)
+AddEventHandler('qb-vehicleshop:server:UpdateShowroomAfterDeletion', function(deletedModel, deletedCategory)
     local currentVehicles = exports['qb-core']:GetShared('Vehicles')
-    
-    for shopName, _ in pairs(Config.Shops) do
-        local replacement = nil
-        local sameCatPool = {}
-        local fallbackPool = {}
-        
-        for k, v in pairs(currentVehicles) do
-            if k ~= deletedModel then
-                local inShop = (v.shop == shopName) or (type(v.shop) == "table" and hasValue(v.shop, shopName))
-                if inShop then
-                    fallbackPool[#fallbackPool + 1] = k
-                    if v.category == deletedCategory then
-                        sameCatPool[#sameCatPool + 1] = k
-                    end
+    local shopPools = {}
+
+    -- Pre-index pools for performance (O(N) instead of O(N^2))
+    for shopName in pairs(Config.Shops) do
+        shopPools[shopName] = { fallbackPool = {}, categoryPools = {} }
+    end
+
+    for model, vehicle in pairs(currentVehicles) do
+        if model ~= deletedModel then
+            local shops = type(vehicle.shop) == 'table' and vehicle.shop or { vehicle.shop }
+            
+            for _, shopName in ipairs(shops) do
+                local pool = shopPools[shopName]
+                if pool then
+                    pool.fallbackPool[#pool.fallbackPool + 1] = model
+                    local category = vehicle.category
+                    if not pool.categoryPools[category] then pool.categoryPools[category] = {} end
+                    pool.categoryPools[category][#pool.categoryPools[category] + 1] = model
                 end
             end
         end
+    end
+
+    for shopName in pairs(Config.Shops) do
+        local replacement = nil
+        local pool = shopPools[shopName]
+        local sameCatPool = pool.categoryPools[deletedCategory] or {}
+        local fallbackPool = pool.fallbackPool
         
         -- Prioritize same category, fallback to any vehicle in the shop
         if #sameCatPool > 0 then
