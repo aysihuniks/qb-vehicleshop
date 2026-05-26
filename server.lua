@@ -553,15 +553,6 @@ QBCore.Commands.Add('transfervehicle', Lang:t('general.command_transfervehicle')
     end
 end)
 
--- Helper to check if a value exists in a table (useful for shop arrays)
-local function hasValue(tbl, val)
-    if type(tbl) ~= "table" then return false end
-    for _, v in pairs(tbl) do
-        if v == val then return true end
-    end
-    return false
-end
-
 -- Dynamically update showrooms if a vehicle gets removed from QBCore.Shared.Vehicles (Server-Side Only for Security)
 AddEventHandler('qb-vehicleshop:server:UpdateShowroomAfterDeletion', function(deletedModel, deletedCategory)
     local currentVehicles = exports['qb-core']:GetShared('Vehicles')
