@@ -566,7 +566,7 @@ end
 RegisterNetEvent('qb-vehicleshop:server:UpdateShowroomAfterDeletion', function(deletedModel, deletedCategory)
     local currentVehicles = exports['qb-core']:GetShared('Vehicles')
     
-    for shopName, shopData in pairs(Config.Shops) do
+    for shopName, _ in pairs(Config.Shops) do
         local replacement = nil
         local sameCatPool = {}
         local fallbackPool = {}
