@@ -136,15 +136,21 @@ local function comma_value(amount)
 end
 
 local function getVehName()
-    return sharedVehicles[Config.Shops[insideShop]['ShowroomVehicles'][ClosestVehicle].chosenVehicle]['name']
+    local chosen = Config.Shops[insideShop] and Config.Shops[insideShop]['ShowroomVehicles'] and Config.Shops[insideShop]['ShowroomVehicles'][ClosestVehicle] and Config.Shops[insideShop]['ShowroomVehicles'][ClosestVehicle].chosenVehicle
+    local veh = chosen and sharedVehicles[chosen]
+    return veh and veh['name'] or tostring(chosen or "Unknown")
 end
 
 local function getVehPrice()
-    return comma_value(sharedVehicles[Config.Shops[insideShop]['ShowroomVehicles'][ClosestVehicle].chosenVehicle]['price'])
+    local chosen = Config.Shops[insideShop] and Config.Shops[insideShop]['ShowroomVehicles'] and Config.Shops[insideShop]['ShowroomVehicles'][ClosestVehicle] and Config.Shops[insideShop]['ShowroomVehicles'][ClosestVehicle].chosenVehicle
+    local veh = chosen and sharedVehicles[chosen]
+    return veh and comma_value(veh['price']) or "0"
 end
 
 local function getVehBrand()
-    return sharedVehicles[Config.Shops[insideShop]['ShowroomVehicles'][ClosestVehicle].chosenVehicle]['brand']
+    local chosen = Config.Shops[insideShop] and Config.Shops[insideShop]['ShowroomVehicles'] and Config.Shops[insideShop]['ShowroomVehicles'][ClosestVehicle] and Config.Shops[insideShop]['ShowroomVehicles'][ClosestVehicle].chosenVehicle
+    local veh = chosen and sharedVehicles[chosen]
+    return veh and veh['brand'] or ""
 end
 
 local function setClosestShowroomVehicle()
@@ -795,7 +801,7 @@ RegisterNetEvent('qb-vehicleshop:client:getVehicles', function()
         local ownedVehicles = {}
         for _, v in pairs(vehicles) do
             local vehData = sharedVehicles[v.vehicle]
-            if v.balance ~= 0 and vehData.shop == insideShop then
+            if vehData and v.balance ~= 0 and vehData.shop == insideShop then
                 local plate = v.plate:upper()
                 ownedVehicles[#ownedVehicles + 1] = {
                     header = vehData.name,
@@ -895,8 +901,12 @@ RegisterNetEvent('qb-vehicleshop:client:financePayment', function(data)
 end)
 
 RegisterNetEvent('qb-vehicleshop:client:openIdMenu', function(data)
+    local header = data.vehicle
+    if sharedVehicles[data.vehicle] then
+        header = sharedVehicles[data.vehicle]['name']
+    end
     local dialog = exports['qb-input']:ShowInput({
-        header = sharedVehicles[data.vehicle]['name'],
+        header = header,
         submitText = Lang:t('menus.submit_text'),
         inputs = {
             {
