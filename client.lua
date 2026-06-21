@@ -426,6 +426,63 @@ end
 
 function Init()
     Initialized = true
+
+    -- Filter out deleted/invalid showroom vehicles before spawning them
+    local currentVehicles = exports['qb-core']:GetShared('Vehicles') or sharedVehicles
+    if currentVehicles and next(currentVehicles) then
+        for shopName, shop in pairs(Config.Shops) do
+            if shop['ShowroomVehicles'] then
+                for i = 1, #shop['ShowroomVehicles'] do
+                    local defaultModel = shop['ShowroomVehicles'][i].defaultVehicle
+                    local chosenModel = shop['ShowroomVehicles'][i].chosenVehicle
+                    
+                    local defaultInvalid = not defaultModel or not currentVehicles[defaultModel] or not next(currentVehicles[defaultModel])
+                    local chosenInvalid = not chosenModel or not currentVehicles[chosenModel] or not next(currentVehicles[chosenModel])
+                    
+                    if defaultInvalid or chosenInvalid then
+                        local replacement = nil
+                        local fallbackPool = {}
+                        
+                        for model, vehicle in pairs(currentVehicles) do
+                            local shops = type(vehicle.shop) == 'table' and vehicle.shop or { vehicle.shop }
+                            local belongsToShop = false
+                            for _, sName in ipairs(shops) do
+                                if sName == shopName then
+                                    belongsToShop = true
+                                    break
+                                end
+                            end
+                            if belongsToShop then
+                                table.insert(fallbackPool, model)
+                            end
+                        end
+                        
+                        if #fallbackPool > 0 then
+                            replacement = fallbackPool[math.random(1, #fallbackPool)]
+                        else
+                            local genericPool = {}
+                            for model in pairs(currentVehicles) do
+                                table.insert(genericPool, model)
+                            end
+                            if #genericPool > 0 then
+                                replacement = genericPool[math.random(1, #genericPool)]
+                            end
+                        end
+                        
+                        if replacement then
+                            if defaultInvalid then
+                                shop['ShowroomVehicles'][i].defaultVehicle = replacement
+                            end
+                            if chosenInvalid then
+                                shop['ShowroomVehicles'][i].chosenVehicle = replacement
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
     CreateThread(function()
         for name, shop in pairs(Config.Shops) do
             if shop['Type'] == 'free-use' then
