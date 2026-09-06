@@ -260,6 +260,70 @@ local function createVehZones(shopName, entity)
     end
 end
 
+-- Despawns the showroom vehicle standing on a slot and spawns another in its place
+local function replaceShowroomVehicle(shopName, index, model, previousModel)
+    local shop = Config.Shops[shopName]
+    local slot = shop and shop['ShowroomVehicles'] and shop['ShowroomVehicles'][index]
+    if not slot or not slot.coords then return end
+    if type(model) ~= 'string' or model == '' then return end
+
+    local coords = slot.coords
+    local origin = vector3(coords.x, coords.y, coords.z)
+    local previousHash = type(previousModel) == 'string' and previousModel ~= '' and GetHashKey(previousModel) or nil
+
+    -- Matched by model as well, so a player's car parked next to the slot is never deleted
+    local current
+    for _, entity in ipairs(GetGamePool('CVehicle')) do
+        if DoesEntityExist(entity) and #(GetEntityCoords(entity) - origin) < 5.0 then
+            if not previousHash or GetEntityModel(entity) == previousHash then
+                current = entity
+                break
+            end
+        end
+    end
+
+    if current then
+        DeleteEntity(current)
+
+        local waited = 0
+        while DoesEntityExist(current) and waited < 2000 do
+            Wait(50)
+            waited = waited + 50
+        end
+    end
+
+    local hash = GetHashKey(model)
+    RequestModel(hash)
+
+    local waited = 0
+    while not HasModelLoaded(hash) and waited < 10000 do
+        Wait(50)
+        waited = waited + 50
+    end
+
+    if not HasModelLoaded(hash) then return end
+
+    local veh = CreateVehicle(hash, coords.x, coords.y, coords.z, false, false)
+
+    waited = 0
+    while not DoesEntityExist(veh) and waited < 2000 do
+        Wait(50)
+        waited = waited + 50
+    end
+
+    SetModelAsNoLongerNeeded(hash)
+    if not DoesEntityExist(veh) then return end
+
+    SetVehicleOnGroundProperly(veh)
+    SetEntityInvincible(veh, true)
+    SetVehicleDirtLevel(veh, 0.0)
+    SetEntityHeading(veh, coords.w)
+    SetVehicleDoorsLocked(veh, 3)
+    FreezeEntityPosition(veh, true)
+    SetVehicleNumberPlateText(veh, 'BUY ME')
+    if Config.UsingTarget then createVehZones(shopName, veh) end
+end
+
 -- Zones
 local function createFreeUseShop(shopShape, name)
     local zone = PolyZone:Create(shopShape, {
@@ -427,32 +491,34 @@ end
 function Init()
     Initialized = true
 
-    -- Filter out deleted/invalid showroom vehicles before spawning them
+    -- Replace showroom vehicles that were deleted or moved to another shop
     local currentVehicles = exports['qb-core']:GetShared('Vehicles') or sharedVehicles
     if currentVehicles and next(currentVehicles) then
         for shopName, shop in pairs(Config.Shops) do
             if shop['ShowroomVehicles'] then
+                local function belongsToShop(model)
+                    local vehicle = model and currentVehicles[model]
+                    if type(vehicle) ~= 'table' then return false end
+                    local shops = type(vehicle.shop) == 'table' and vehicle.shop or { vehicle.shop }
+                    for _, sName in ipairs(shops) do
+                        if sName == shopName then return true end
+                    end
+                    return false
+                end
+
                 for i = 1, #shop['ShowroomVehicles'] do
                     local defaultModel = shop['ShowroomVehicles'][i].defaultVehicle
                     local chosenModel = shop['ShowroomVehicles'][i].chosenVehicle
                     
-                    local defaultInvalid = not defaultModel or not currentVehicles[defaultModel] or not next(currentVehicles[defaultModel])
-                    local chosenInvalid = not chosenModel or not currentVehicles[chosenModel] or not next(currentVehicles[chosenModel])
+                    local defaultInvalid = not defaultModel or not currentVehicles[defaultModel] or not next(currentVehicles[defaultModel]) or not belongsToShop(defaultModel)
+                    local chosenInvalid = not chosenModel or not currentVehicles[chosenModel] or not next(currentVehicles[chosenModel]) or not belongsToShop(chosenModel)
                     
                     if defaultInvalid or chosenInvalid then
                         local replacement = nil
                         local fallbackPool = {}
                         
-                        for model, vehicle in pairs(currentVehicles) do
-                            local shops = type(vehicle.shop) == 'table' and vehicle.shop or { vehicle.shop }
-                            local belongsToShop = false
-                            for _, sName in ipairs(shops) do
-                                if sName == shopName then
-                                    belongsToShop = true
-                                    break
-                                end
-                            end
-                            if belongsToShop then
+                        for model in pairs(currentVehicles) do
+                            if belongsToShop(model) then
                                 table.insert(fallbackPool, model)
                             end
                         end
@@ -496,7 +562,8 @@ function Init()
     CreateThread(function()
         for k in pairs(Config.Shops) do
             for i = 1, #Config.Shops[k]['ShowroomVehicles'] do
-                local model = GetHashKey(Config.Shops[k]['ShowroomVehicles'][i].defaultVehicle)
+                local slot = Config.Shops[k]['ShowroomVehicles'][i]
+                local model = GetHashKey(slot.chosenVehicle or slot.defaultVehicle)
                 RequestModel(model)
                 while not HasModelLoaded(model) do
                     Wait(0)
@@ -811,32 +878,14 @@ end)
 
 RegisterNetEvent('qb-vehicleshop:client:swapVehicle', function(data)
     local shopName = data.ClosestShop
-    if Config.Shops[shopName]['ShowroomVehicles'][data.ClosestVehicle].chosenVehicle ~= data.toVehicle then
-        local closestVehicle, closestDistance = QBCore.Functions.GetClosestVehicle(vector3(Config.Shops[shopName]['ShowroomVehicles'][data.ClosestVehicle].coords.x, Config.Shops[shopName]['ShowroomVehicles'][data.ClosestVehicle].coords.y, Config.Shops[shopName]['ShowroomVehicles'][data.ClosestVehicle].coords.z))
-        if closestVehicle == 0 then return end
-        if closestDistance < 5 then DeleteEntity(closestVehicle) end
-        while DoesEntityExist(closestVehicle) do
-            Wait(50)
-        end
-        Config.Shops[shopName]['ShowroomVehicles'][data.ClosestVehicle].chosenVehicle = data.toVehicle
-        local model = GetHashKey(data.toVehicle)
-        RequestModel(model)
-        while not HasModelLoaded(model) do
-            Wait(50)
-        end
-        local veh = CreateVehicle(model, Config.Shops[shopName]['ShowroomVehicles'][data.ClosestVehicle].coords.x, Config.Shops[shopName]['ShowroomVehicles'][data.ClosestVehicle].coords.y, Config.Shops[shopName]['ShowroomVehicles'][data.ClosestVehicle].coords.z, false, false)
-        while not DoesEntityExist(veh) do
-            Wait(50)
-        end
-        SetModelAsNoLongerNeeded(model)
-        SetVehicleOnGroundProperly(veh)
-        SetEntityInvincible(veh, true)
-        SetEntityHeading(veh, Config.Shops[shopName]['ShowroomVehicles'][data.ClosestVehicle].coords.w)
-        SetVehicleDoorsLocked(veh, 3)
-        FreezeEntityPosition(veh, true)
-        SetVehicleNumberPlateText(veh, 'BUY ME')
-        if Config.UsingTarget then createVehZones(shopName, veh) end
-    end
+    local shop = Config.Shops[shopName]
+    local slot = shop and shop['ShowroomVehicles'] and shop['ShowroomVehicles'][data.ClosestVehicle]
+    if not slot or slot.chosenVehicle == data.toVehicle then return end
+
+    -- Committed before the respawn, which is skipped when nobody is near the shop
+    local previousModel = slot.chosenVehicle
+    slot.chosenVehicle = data.toVehicle
+    replaceShowroomVehicle(shopName, data.ClosestVehicle, data.toVehicle, previousModel)
 end)
 
 RegisterNetEvent('qb-vehicleshop:client:buyShowroomVehicle', function(vehicle, plate)
@@ -1001,22 +1050,19 @@ CreateThread(function()
     end
 end)
 
--- Update the showroom physically when a vehicle is dynamically removed
+-- Update the showroom physically when a vehicle is removed from the shop
 RegisterNetEvent('qb-vehicleshop:client:ReplaceDeletedVehicle', function(shopName, deletedModel, replacement)
     if not Config.Shops[shopName] then return end
-    
+    if type(replacement) ~= 'string' or replacement == '' then return end
+
     for i, vehData in ipairs(Config.Shops[shopName]['ShowroomVehicles']) do
         if vehData.defaultVehicle == deletedModel then
             vehData.defaultVehicle = replacement
         end
-        
+
         if vehData.chosenVehicle == deletedModel then
-            local swapData = {
-                ClosestShop = shopName,
-                ClosestVehicle = i,
-                toVehicle = replacement
-            }
-            TriggerEvent('qb-vehicleshop:client:swapVehicle', swapData)
+            vehData.chosenVehicle = replacement
+            replaceShowroomVehicle(shopName, i, replacement, deletedModel)
         end
     end
 end)
